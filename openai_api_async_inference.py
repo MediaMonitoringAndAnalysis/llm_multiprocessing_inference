@@ -12,6 +12,19 @@ import re
 # from src.utils import _extract_structured_data
 from copy import copy
 
+api_pipleines = {
+    "OpenAI": {
+        "model": "gpt-4o",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "rate_limit": 5
+    },
+    "Perplexity": {
+        "model": "llama-3.1-sonar-small-128k-chat",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "rate_limit": 2
+    }
+}
+
 
 def _extract_and_evaluate_first(string, default_response):
     start_char = str(default_response)[0]
@@ -65,21 +78,26 @@ async def _call_chatgpt_async(
     message: List[Dict[str, str]],
     response_type: Literal["structured", "unstructured"],
     model: str,
+    api_pipeline: Literal["OpenAI", "Perplexity"],
     default_response: str,
-    openai_api_key: str,
+    api_key: str,
 ):
+    
+    final_model = api_pipleines[api_pipeline]["model"] if model is None else model
+    url = api_pipleines[api_pipeline]["url"]
+    
     payload = {
-        "model": model,
+        "model": final_model,
         "messages": message,
         "temperature": 0.0,
     }
     
     async with semaphore:
         async with session.post(
-            url="https://api.openai.com/v1/chat/completions",
+            url=url,
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {openai_api_key}",
+                "Authorization": f"Bearer {api_key}",
             },
             json=payload,
             ssl=ssl.create_default_context(cafile=certifi.where()),
@@ -120,9 +138,10 @@ async def _call_chatgpt_bulk(
     default_response: str,
     response_type: Literal["structured", "unstructured"],
     model: str,
-    openai_api_key: str,
-    rate_limit: int = 3,
+    api_key: str,
+    api_pipeline: Literal["OpenAI", "Perplexity"],
 ):
+    rate_limit = api_pipleines[api_pipeline]["rate_limit"]
     assert response_type in ["structured", "unstructured"]
     # print("Messages", messages)
     semaphore = asyncio.Semaphore(rate_limit)  # Control concurrency level
@@ -140,7 +159,8 @@ async def _call_chatgpt_bulk(
                     response_type=response_type,
                     model=model,
                     default_response=default_response,
-                    openai_api_key=openai_api_key
+                    api_key=api_key,
+                    api_pipeline=api_pipeline,
                 )
             finally:
                 progress_bar.update(1)  # Update the progress for each completed task
@@ -162,8 +182,9 @@ def get_answers(
     prompts: List[List[Dict[str, str]]],
     default_response: str,
     response_type: Literal["structured", "unstructured"],
-    model: str,
-    openai_api_key: str,
+    api_pipeline: Literal["OpenAI", "Perplexity"],
+    api_key: str,
+    model: str = None,
 ) -> List[Union[str, Dict[str, Union[str, float]]]]:
 
     try:
@@ -173,7 +194,8 @@ def get_answers(
                 response_type=response_type,
                 model=model,
                 default_response=default_response,
-                openai_api_key=openai_api_key
+                api_key=api_key,
+                api_pipeline=api_pipeline,
             )  # _call_chatgpt_bulk(prompts, "{}", "structured")
         )
     except ExceptionGroup as e:
