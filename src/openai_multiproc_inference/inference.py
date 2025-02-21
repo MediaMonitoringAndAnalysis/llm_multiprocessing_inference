@@ -140,14 +140,18 @@ async def _call_chatgpt_bulk(
     model: str,
     api_key: str,
     api_pipeline: Literal["OpenAI", "Perplexity"],
+    specific_description: str = "",
 ):
+    final_description = "Processing Data"
+    if specific_description != "":
+        final_description += f": {specific_description}"
     rate_limit = api_pipleines[api_pipeline]["rate_limit"]
     assert response_type in ["structured", "unstructured"]
     # print("Messages", messages)
     semaphore = asyncio.Semaphore(rate_limit)  # Control concurrency level
     async with aiohttp.ClientSession() as session:
         # Create a tqdm async progress bar
-        progress_bar = tqdm(total=len(messages), desc="Processing Data", position=0)
+        progress_bar = tqdm(total=len(messages), desc=final_description, position=0)
 
         async def wrapped_call(session, message):
             # Wrap your call in a function that updates the progress bar
