@@ -184,11 +184,12 @@ async def _call_chatgpt_bulk(
 
 def get_answers(
     prompts: List[List[Dict[str, str]]],
-    default_response: str,
+    default_response: Union[str, List, Dict],
     response_type: Literal["structured", "unstructured"],
     api_pipeline: Literal["OpenAI", "Perplexity"],
     api_key: str,
     model: str = None,
+    specific_description: str = "",
 ) -> List[Union[str, Dict[str, Union[str, float]]]]:
 
     try:
@@ -197,9 +198,10 @@ def get_answers(
                 messages=prompts,
                 response_type=response_type,
                 model=model,
-                default_response=default_response,
+                default_response=str(default_response),
                 api_key=api_key,
                 api_pipeline=api_pipeline,
+                specific_description=specific_description,
             )  # _call_chatgpt_bulk(prompts, "{}", "structured")
         )
     except ExceptionGroup as e:
