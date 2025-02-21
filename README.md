@@ -5,7 +5,7 @@ A Python package for efficient parallel inference using OpenAI and other LLM API
 ## Installation
 
 ```bash
-pip install git+https://github.com/yourusername/openai_multiproc_inference.git
+pip install git+https://github.com/MediaMonitoringAndAnalysis/openai_multiproc_inference.git
 ```
 
 ## Features
