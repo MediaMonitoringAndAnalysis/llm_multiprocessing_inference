@@ -189,7 +189,7 @@ def get_answers(
     api_pipeline: Literal["OpenAI", "Perplexity"],
     api_key: str,
     model: str = None,
-    progress_bar: bool = True,
+    show_progress_bar: bool = True,
 ) -> List[Union[str, List[str], Dict[str, Union[str, float]]]]:
 
     try:
@@ -201,7 +201,7 @@ def get_answers(
                 default_response=default_response,
                 api_key=api_key,
                 api_pipeline=api_pipeline,
-                progress_bar=progress_bar,
+                progress_bar=show_progress_bar,
             )  # _call_chatgpt_bulk(prompts, "{}", "structured")
         )
     except ExceptionGroup as e:
