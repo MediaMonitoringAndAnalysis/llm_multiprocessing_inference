@@ -12,7 +12,7 @@ import re
 # from src.utils import _extract_structured_data
 from copy import copy
 
-api_pipleines = {
+api_pipelines = {
     "OpenAI": {
         "model": "gpt-4o",
         "url": "https://api.openai.com/v1/chat/completions",
@@ -142,7 +142,7 @@ async def _call_chatgpt_bulk(
     api_pipeline: Literal["OpenAI", "Perplexity"],
     progress_bar: bool = True,
 ):
-    rate_limit = api_pipleines[api_pipeline]["rate_limit"]
+    rate_limit = api_pipelines[api_pipeline]["rate_limit"]
     assert response_type in ["structured", "unstructured"]
     # print("Messages", messages)
     semaphore = asyncio.Semaphore(rate_limit)  # Control concurrency level
