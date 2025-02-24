@@ -140,18 +140,16 @@ async def _call_chatgpt_bulk(
     model: str,
     api_key: str,
     api_pipeline: Literal["OpenAI", "Perplexity"],
-    specific_description: str = "",
+    progress_bar: bool = True,
 ):
-    final_description = "Processing Data"
-    if specific_description != "":
-        final_description += f": {specific_description}"
     rate_limit = api_pipleines[api_pipeline]["rate_limit"]
     assert response_type in ["structured", "unstructured"]
     # print("Messages", messages)
     semaphore = asyncio.Semaphore(rate_limit)  # Control concurrency level
     async with aiohttp.ClientSession() as session:
         # Create a tqdm async progress bar
-        progress_bar = tqdm(total=len(messages), desc=final_description, position=0)
+        if progress_bar:
+            progress_bar = tqdm(total=len(messages), desc="Processing Data", position=0)
 
         async def wrapped_call(session, message):
             # Wrap your call in a function that updates the progress bar
@@ -167,7 +165,8 @@ async def _call_chatgpt_bulk(
                     api_pipeline=api_pipeline,
                 )
             finally:
-                progress_bar.update(1)  # Update the progress for each completed task
+                if progress_bar:
+                    progress_bar.update(1)  # Update the progress for each completed task
 
         # Use asyncio.TaskGroup for managing tasks
         async with asyncio.TaskGroup() as tg:
@@ -177,20 +176,21 @@ async def _call_chatgpt_bulk(
             responses = await asyncio.gather(*tasks)
 
         # Ensure the progress bar closes properly
-        progress_bar.close()
+        if progress_bar:
+            progress_bar.close()
 
     return responses
 
 
 def get_answers(
     prompts: List[List[Dict[str, str]]],
-    default_response: Union[str, List, Dict],
+    default_response: str,
     response_type: Literal["structured", "unstructured"],
     api_pipeline: Literal["OpenAI", "Perplexity"],
     api_key: str,
     model: str = None,
-    specific_description: str = "",
-) -> List[Union[str, Dict[str, Union[str, float]]]]:
+    progress_bar: bool = True,
+) -> List[Union[str, List[str], Dict[str, Union[str, float]]]]:
 
     try:
         answers: Union[str, Dict[str, Union[str, float]]] = asyncio.run(
@@ -198,10 +198,10 @@ def get_answers(
                 messages=prompts,
                 response_type=response_type,
                 model=model,
-                default_response=str(default_response),
+                default_response=default_response,
                 api_key=api_key,
                 api_pipeline=api_pipeline,
-                specific_description=specific_description,
+                progress_bar=progress_bar,
             )  # _call_chatgpt_bulk(prompts, "{}", "structured")
         )
     except ExceptionGroup as e:
