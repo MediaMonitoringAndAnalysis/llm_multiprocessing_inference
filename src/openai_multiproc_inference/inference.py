@@ -83,8 +83,8 @@ async def _call_chatgpt_async(
     api_key: str,
 ):
     
-    final_model = api_pipleines[api_pipeline]["model"] if model is None else model
-    url = api_pipleines[api_pipeline]["url"]
+    final_model = api_pipelines[api_pipeline]["model"] if model is None else model
+    url = api_pipelines[api_pipeline]["url"]
     
     payload = {
         "model": final_model,
