@@ -141,7 +141,11 @@ async def _call_chatgpt_bulk(
     api_key: str,
     api_pipeline: Literal["OpenAI", "Perplexity"],
     progress_bar: bool = True,
+    additional_progress_bar_description: str = "",
 ):
+    final_progress_bar_description = "Processing Data"
+    if additional_progress_bar_description != "":
+        final_progress_bar_description += f" for {additional_progress_bar_description}"
     rate_limit = api_pipelines[api_pipeline]["rate_limit"]
     assert response_type in ["structured", "unstructured"]
     # print("Messages", messages)
@@ -149,7 +153,7 @@ async def _call_chatgpt_bulk(
     async with aiohttp.ClientSession() as session:
         # Create a tqdm async progress bar
         if progress_bar:
-            progress_bar = tqdm(total=len(messages), desc="Processing Data", position=0)
+            progress_bar = tqdm(total=len(messages), desc=final_progress_bar_description, position=0)
 
         async def wrapped_call(session, message):
             # Wrap your call in a function that updates the progress bar
@@ -190,6 +194,7 @@ def get_answers(
     api_key: str,
     model: str = None,
     show_progress_bar: bool = True,
+    additional_progress_bar_description: str = "",
 ) -> List[Union[str, List[str], Dict[str, Union[str, float]]]]:
 
     try:
@@ -202,6 +207,7 @@ def get_answers(
                 api_key=api_key,
                 api_pipeline=api_pipeline,
                 progress_bar=show_progress_bar,
+                additional_progress_bar_description=additional_progress_bar_description,
             )  # _call_chatgpt_bulk(prompts, "{}", "structured")
         )
     except ExceptionGroup as e:
