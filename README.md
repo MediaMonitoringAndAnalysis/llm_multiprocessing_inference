@@ -1,6 +1,6 @@
 # OpenAI Multiprocess Inference
 
-A Python package for efficient parallel inference using OpenAI and other LLM APIs.
+A Python package for efficient parallel inference using OpenAI and other LLM APIs (can only be used on .py scripts and not on jupyter notebooks).
 
 ## Installation
 
