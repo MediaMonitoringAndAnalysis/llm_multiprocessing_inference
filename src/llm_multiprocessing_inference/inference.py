@@ -227,9 +227,10 @@ def _create_ollama_models(
     model_name: str,
 ):
     for i, system_prompt in enumerate(system_prompts):
+        # print(system_prompt)
         model_id = f"{model_name}-{i}"
         ollama.create(
-            model_id,
+            model=model_id,
             system=system_prompt,
             from_=model_name,
             parameters={"temperature": 0.0},
@@ -271,7 +272,8 @@ def _ollama_inference(
         )
     for prompt in prompts:
         model_id = _get_model_id(prompt, system_prompts, model_name)
-        answer = ollama.chat(model=model_id, messages=prompt[1]["content"])
+        answer = ollama.chat(model=model_id, messages=prompt[1:])
+        answer = answer.message.content
         answer = _postprocess_output(answer, default_response, response_type)
         answers.append(answer)
         if progress_bar:
@@ -311,9 +313,10 @@ def get_answers(
         )
 
     else:
-        ollama.pull(model)
         if model is None:
             model = general_pipelines["Ollama"]["model"]
+            
+        os.system(f"ollama pull {model}")
         # Ollama call implementation is for now sequential to avoid memory issues
         answers = _ollama_inference(
             prompts=prompts,
