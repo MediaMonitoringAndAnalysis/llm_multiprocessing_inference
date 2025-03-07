@@ -2,3 +2,5 @@ openai
 aiohttp
 certifi
 tqdm
+Levenshtein
+ollama

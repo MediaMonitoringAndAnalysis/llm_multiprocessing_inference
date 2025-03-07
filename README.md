@@ -2,6 +2,11 @@
 
 A Python package for efficient parallel inference using OpenAI and other LLM APIs (can only be used on .py scripts and not on jupyter notebooks).
 
+## Prerequisites
+
+- Python 3.10+
+- Ollama installed: [text](https://ollama.com/download)
+
 ## Installation
 
 ```bash
@@ -16,6 +21,7 @@ pip install git+https://github.com/MediaMonitoringAndAnalysis/llm_multiprocessin
 - 🎯 Structured and unstructured response handling
 - 🛡️ Built-in error handling and retries
 - ⚡ Optimized for high-throughput scenarios
+- 🔄 Support for Ollama
 
 ## Quick Start
 ```python
