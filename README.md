@@ -59,6 +59,8 @@ answers = get_answers(
 ```python
 from llm_multiprocessing_inference import get_answers
 
+stream = True
+
 unstructured_system_prompt = (
     "You are a helpful assistant, answer the user's question in a free text format."
 )
@@ -80,8 +82,15 @@ answers = get_answers(
     default_response="-",
     response_type="unstructured",
     api_pipeline="Ollama",  # or "Perplexity" or "OpenAI"
-    model="phi4-mini:3.8b-q4_K_M"
+    model="phi4-mini:3.8b-q4_K_M",
+    stream=stream,
 )
+
+if stream:
+    for answer in answers:
+        print(answer, end="", flush=True)
+else:
+    print(answers)
 ```
 
 ### Example 3: Structured inference with images with OpenAI
