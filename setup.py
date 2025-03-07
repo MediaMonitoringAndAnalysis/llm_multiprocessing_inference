@@ -7,14 +7,14 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="openai_multiproc_inference",
+    name="llm_multiprocessing_inference",
     version="0.1.0",
     author="Reporter.ai (https://reporterai.org)",
-    author_email="reporter·ai@boldcode.io",
-    description="A package for parallel inference using OpenAI and other LLM APIs",
+    author_email="reporter.ai@boldcode.io",
+    description="A package for parallel inference using OpenAI, other LLM APIs and local models",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/openai_multiproc_inference",
+    url="https://github.com/MediaMonitoringAndAnalysis/llm_multiprocessing_inference",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[
