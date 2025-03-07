@@ -187,7 +187,7 @@ Here's the complete tree structure for the package:
 ├── requirements.txt
 ├── setup.py
 └── src/
-    └── openai_multiproc_inference/
+    └── llm_multiprocessing_inference/
         ├── __init__.py
         └── inference.py
 ```
