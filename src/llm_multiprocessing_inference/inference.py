@@ -301,7 +301,7 @@ def get_answers(
     model: Optional[str] = None,
     show_progress_bar: bool = True,
     additional_progress_bar_description: str = "",
-    # stream: bool = False,
+    stream: bool = False,
 ) -> List[Union[str, List[str], Dict[str, Union[str, float]]]]:
     
     assert api_pipeline in general_pipelines.keys(), "Invalid API pipeline, choose between OpenAI, Perplexity or Ollama."
