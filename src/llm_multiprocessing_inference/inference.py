@@ -257,7 +257,7 @@ def _ollama_inference(
     response_type: Literal["structured", "unstructured"],
     progress_bar: bool = True,
     additional_progress_bar_description: str = "",
-    stream: bool = False,
+    # stream: bool = False,
 ):
     final_progress_bar_description = "Processing Data"
     if additional_progress_bar_description != "":
@@ -273,24 +273,24 @@ def _ollama_inference(
         )
     for prompt in prompts:
         model_id = _get_model_id(prompt, system_prompts, model_name)
-        if stream:
-            stream = ollama.chat(model=model_id, messages=prompt[1:], stream=True)
-            answer = ""
-            for chunk in stream:
-                new_chunk = chunk.message.content
-                answer += new_chunk
-                yield new_chunk
-                # print(chunk.message.content, end="", flush=True)
-        else:
-            answer = ollama.chat(model=model_id, messages=prompt[1:])
-            answer = answer.message.content
+        # if stream:
+        #     stream = ollama.chat(model=model_id, messages=prompt[1:], stream=True)
+        #     answer = ""
+        #     for chunk in stream:
+        #         new_chunk = chunk.message.content
+        #         answer += new_chunk
+        #         yield new_chunk
+        #         # print(chunk.message.content, end="", flush=True)
+        # else:
+        answer = ollama.chat(model=model_id, messages=prompt[1:])
+        answer = answer.message.content
         answer = _postprocess_output(answer, default_response, response_type)
         answers.append(answer)
         if progress_bar:
             progress_bar.update(1)
-
+            
     return answers
-
+    
 
 def get_answers(
     prompts: List[List[Dict[str, str]]],
@@ -301,7 +301,7 @@ def get_answers(
     model: Optional[str] = None,
     show_progress_bar: bool = True,
     additional_progress_bar_description: str = "",
-    stream: bool = False,
+    # stream: bool = False,
 ) -> List[Union[str, List[str], Dict[str, Union[str, float]]]]:
     
     assert api_pipeline in general_pipelines.keys(), "Invalid API pipeline, choose between OpenAI, Perplexity or Ollama."
@@ -323,7 +323,6 @@ def get_answers(
                 additional_progress_bar_description=additional_progress_bar_description,
             )  # _call_chatgpt_bulk(prompts, "{}", "structured")
         )
-        return answers
 
     else:
         if model is None:
@@ -331,12 +330,13 @@ def get_answers(
             
         os.system(f"ollama pull {model}")
         # Ollama call implementation is for now sequential to avoid memory issues
-        return _ollama_inference(
+        answers = _ollama_inference(
             prompts=prompts,
             model_name=model,
             default_response=default_response,
             response_type=response_type,
             progress_bar=show_progress_bar,
-            stream=stream,
+            # stream=stream,
         )
 
+    return answers
