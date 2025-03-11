@@ -1,4 +1,4 @@
-from typing import Dict, List, Literal, Union, Optional
+from typing import Dict, List, Literal, Union, Optional, Callable
 import aiohttp
 import asyncio
 import ssl
@@ -294,33 +294,43 @@ def _ollama_inference(
 
     return answers
 
-
 def _ollama_inference_stream(
     prompts: List[List[Dict[str, str]]],
     model_name: str,
     default_response: str,
     response_type: Literal["structured", "unstructured"],
-    # stream: bool = False,
+    custom_filter_function: Callable = None,
 ):
-    final_progress_bar_description = "Processing Data"
-    system_prompts = list(set([prompt[0]["content"] for prompt in prompts]))
+    answers = []
+
+    system_prompts = list({prompt[0]["content"] for prompt in prompts})
     _create_ollama_models(system_prompts, model_name)
 
-    answers = []
-    for prompt in prompts:
-        model_id = _get_model_id(prompt, system_prompts, model_name)
-        # if stream:
-        stream = ollama.chat(model=model_id, messages=prompt[1:], stream=True)
-        answer = ""
-        for chunk in stream:
-            new_chunk = chunk.message.content
-            answer += new_chunk
-            yield new_chunk
+    def generator():
 
-        answer = _postprocess_output(answer, default_response, response_type)
-        answers.append(answer)
+        for prompt in prompts:
+            model_id = _get_model_id(prompt, system_prompts, model_name)
+            stream = ollama.chat(model=model_id, messages=prompt[1:], stream=True)
+            answer = ""
+            for chunk in stream:
+                new_chunk = chunk.message.content
+                new_chunk = replace_unneeded_characters(new_chunk)
 
-    return answers
+                if custom_filter_function is not None:
+                    new_chunk_is_relevant = custom_filter_function(answer)
+                else:
+                    new_chunk_is_relevant = True
+                    
+                if new_chunk_is_relevant:
+                    yield new_chunk  # streaming each chunk
+                    
+                answer += new_chunk
+            processed_answer = _postprocess_output(
+                answer, default_response, response_type
+            )
+            answers.append(processed_answer)
+
+    return generator(), answers
 
 
 def get_answers(
