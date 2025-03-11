@@ -395,6 +395,7 @@ def get_answers_stream(
     api_pipeline: Literal["OpenAI", "Perplexity", "Ollama"],
     api_key: Optional[str] = None,
     model: Optional[str] = None,
+    custom_filter_function: Callable = None,
 ) -> List[Union[str, List[str], Dict[str, Union[str, float]]]]:
 
     if model is None:
@@ -409,6 +410,7 @@ def get_answers_stream(
         default_response=default_response,
         response_type=response_type,
         # stream=stream,
+        custom_filter_function=custom_filter_function,
     )
 
     return answers
