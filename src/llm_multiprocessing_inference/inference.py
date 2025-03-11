@@ -69,13 +69,13 @@ def replace_unneeded_characters(s):
         .replace("\n", " ")
         .replace("\t", " ")
         .replace("\\xa0", "\\u00A0")
-        .strip()
+        # .strip()
     )
 
 
 def _posprocess_gpt_output(s, default_response):
     # Remove trailing commas from objects and arrays
-    s = re.sub(r",(\s*[}\]])", r"\1", s)
+    s = re.sub(r",(\s*[}\]])", r"\1", s).strip()
     s = replace_unneeded_characters(s)
     s = _remove_commas_between_numbers(s)
 
@@ -93,6 +93,7 @@ def postprocess_structured_output(output_text: str, default_response: str):
         try:
             gpt_extracted_infos = json.loads(output_text)
         except Exception as e:
+            print("json.loads failed", output_text)
             # st.markdown("Error in extracting structured data", e)
             # st.markdown(output_text)
             gpt_extracted_infos = default_response
@@ -224,11 +225,18 @@ async def _call_chatgpt_bulk(
 
     return responses
 
+def _get_model_id(
+    system_prompt: str,
+    model_name: str,
+):
+    return f"{model_name}-{system_prompt}"
 
 def _create_ollama_models(
     system_prompts: List[str],
     model_name: str,
 ):
+    saved_system_prompts_folder = os.path.join("data", "saved_system_prompts")
+    os.makedirs(saved_system_prompts_folder, exist_ok=True)
     for i, system_prompt in enumerate(system_prompts):
         # print(system_prompt)
         model_id = f"{model_name}-{i}"
@@ -404,7 +412,7 @@ def get_answers_stream(
 
     os.system(f"ollama pull {model}")
     # Ollama call implementation is for now sequential to avoid memory issues
-    answers = _ollama_inference_stream(
+    generator, answers = _ollama_inference_stream(
         prompts=prompts,
         model_name=model,
         default_response=default_response,
@@ -413,4 +421,4 @@ def get_answers_stream(
         custom_filter_function=custom_filter_function,
     )
 
-    return answers
+    return generator, answers
