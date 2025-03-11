@@ -59,10 +59,8 @@ def _remove_commas_between_numbers(text):
     return re.sub(pattern, "", text)
 
 
-def _posprocess_gpt_output(s, default_response):
-    # Remove trailing commas from objects and arrays
-    s = re.sub(r",(\s*[}\]])", r"\1", s)
-    s = (
+def replace_unneeded_characters(s):
+    return (
         s.replace("```", "")
         .replace("json\n", "")
         .replace("json", "")
@@ -74,6 +72,11 @@ def _posprocess_gpt_output(s, default_response):
         .strip()
     )
 
+
+def _posprocess_gpt_output(s, default_response):
+    # Remove trailing commas from objects and arrays
+    s = re.sub(r",(\s*[}\]])", r"\1", s)
+    s = replace_unneeded_characters(s)
     s = _remove_commas_between_numbers(s)
 
     s = _extract_and_evaluate_first(s, default_response)
@@ -288,9 +291,37 @@ def _ollama_inference(
         answers.append(answer)
         if progress_bar:
             progress_bar.update(1)
-            
+
     return answers
-    
+
+
+def _ollama_inference_stream(
+    prompts: List[List[Dict[str, str]]],
+    model_name: str,
+    default_response: str,
+    response_type: Literal["structured", "unstructured"],
+    # stream: bool = False,
+):
+    final_progress_bar_description = "Processing Data"
+    system_prompts = list(set([prompt[0]["content"] for prompt in prompts]))
+    _create_ollama_models(system_prompts, model_name)
+
+    answers = []
+    for prompt in prompts:
+        model_id = _get_model_id(prompt, system_prompts, model_name)
+        # if stream:
+        stream = ollama.chat(model=model_id, messages=prompt[1:], stream=True)
+        answer = ""
+        for chunk in stream:
+            new_chunk = chunk.message.content
+            answer += new_chunk
+            yield new_chunk
+
+        answer = _postprocess_output(answer, default_response, response_type)
+        answers.append(answer)
+
+    return answers
+
 
 def get_answers(
     prompts: List[List[Dict[str, str]]],
@@ -303,9 +334,14 @@ def get_answers(
     additional_progress_bar_description: str = "",
     stream: bool = False,
 ) -> List[Union[str, List[str], Dict[str, Union[str, float]]]]:
-    
-    assert api_pipeline in general_pipelines.keys(), "Invalid API pipeline, choose between OpenAI, Perplexity or Ollama."
-    assert response_type in ["structured", "unstructured"], "Invalid response type, choose between structured or unstructured."
+
+    assert (
+        api_pipeline in general_pipelines.keys()
+    ), "Invalid API pipeline, choose between OpenAI, Perplexity or Ollama."
+    assert response_type in [
+        "structured",
+        "unstructured",
+    ], "Invalid response type, choose between structured or unstructured."
 
     # try:
     if api_pipeline != "Ollama":
@@ -327,7 +363,7 @@ def get_answers(
     else:
         if model is None:
             model = general_pipelines["Ollama"]["model"]
-            
+
         os.system(f"ollama pull {model}")
         # Ollama call implementation is for now sequential to avoid memory issues
         answers = _ollama_inference(
@@ -338,5 +374,31 @@ def get_answers(
             progress_bar=show_progress_bar,
             # stream=stream,
         )
+
+    return answers
+
+
+def get_answers_stream(
+    prompts: List[List[Dict[str, str]]],
+    default_response: str,
+    response_type: Literal["structured", "unstructured"],
+    api_pipeline: Literal["OpenAI", "Perplexity", "Ollama"],
+    api_key: Optional[str] = None,
+    model: Optional[str] = None,
+) -> List[Union[str, List[str], Dict[str, Union[str, float]]]]:
+
+    if model is None:
+        # only ollama is supported for streaming for now
+        model = general_pipelines["Ollama"]["model"]
+
+    os.system(f"ollama pull {model}")
+    # Ollama call implementation is for now sequential to avoid memory issues
+    answers = _ollama_inference_stream(
+        prompts=prompts,
+        model_name=model,
+        default_response=default_response,
+        response_type=response_type,
+        # stream=stream,
+    )
 
     return answers

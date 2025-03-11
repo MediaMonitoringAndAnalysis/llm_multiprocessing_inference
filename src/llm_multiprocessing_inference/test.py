@@ -1,4 +1,4 @@
-from inference import get_answers
+from inference import get_answers, get_answers_stream
 
 prompts = [
     [
@@ -25,9 +25,19 @@ if __name__ == "__main__":
         # stream=stream,
     )
     
-    # if stream:
-        # for answer in answers:
-        #     print(answer, end="", flush=True)
-    # else:
-        
     print(answers)
+    
+    answers_stream = get_answers_stream(
+        prompts=prompts,
+        default_response="{}",
+        response_type="structured",
+        api_pipeline="Ollama",
+        model="phi4-mini:3.8b-q4_K_M",
+    )
+    
+    var_answer = ""
+    
+    for answer in answers_stream:
+        var_answer += answer
+        print(answer, end="", flush=True)
+        
