@@ -84,7 +84,7 @@ def _posprocess_gpt_output(s, default_response):
     return s
 
 
-def _postprocess_structured_output(output_text: str, default_response: str):
+def postprocess_structured_output(output_text: str, default_response: str):
     output_text = _posprocess_gpt_output(output_text, default_response)
     try:
         gpt_extracted_infos = literal_eval(output_text)
@@ -106,7 +106,7 @@ def _postprocess_output(
     response_type: Literal["structured", "unstructured"],
 ):
     if response_type == "structured":
-        gpt_extracted_infos = _postprocess_structured_output(
+        gpt_extracted_infos = postprocess_structured_output(
             output_text, default_response
         )
     else:
