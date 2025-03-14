@@ -9,8 +9,7 @@ import os
 from ast import literal_eval
 import re
 import ollama
-
-# from src.utils import _extract_structured_data
+import base64
 from copy import copy
 from Levenshtein import distance as levenshtein
 
@@ -115,6 +114,12 @@ def _postprocess_output(
 
     return gpt_extracted_infos
 
+def _encode_image(image_path: str) -> str:
+    """Encode an image to a base64 string if it is a valid image file."""
+    if not os.path.exists(image_path):
+        return image_path
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode("utf-8")
 
 # Call ChatGPT with the given prompt, asynchronously.
 async def _call_chatgpt_async(
@@ -293,7 +298,7 @@ def _ollama_inference(
         #         yield new_chunk
         #         # print(chunk.message.content, end="", flush=True)
         # else:
-        answer = ollama.chat(model=model_id, messages=prompt[1:])
+        answer = _do_ollama_inference(prompt, model_id, stream=False)
         answer = answer.message.content
         answer = _postprocess_output(answer, default_response, response_type)
         answers.append(answer)
@@ -301,6 +306,22 @@ def _ollama_inference(
             progress_bar.update(1)
 
     return answers
+
+def _do_ollama_inference(
+    prompt: List[Dict[str, str]],
+    model_id: str,
+    stream: bool = False,
+):
+    final_user_prompt = prompt[1:]
+    if "images" in final_user_prompt:
+        final_images = []
+        for image in final_user_prompt["images"]:
+            final_images.append(f"data:image/png;base64,{_encode_image(image)}")
+        final_user_prompt["images"] = final_images
+        
+    stream = ollama.chat(model=model_id, messages=final_user_prompt, stream=stream)
+    return stream
+        
 
 def _ollama_inference_stream(
     prompts: List[List[Dict[str, str]]],
@@ -318,7 +339,7 @@ def _ollama_inference_stream(
 
         for prompt in prompts:
             model_id = _get_model_id(prompt, system_prompts, model_name)
-            stream = ollama.chat(model=model_id, messages=prompt[1:], stream=True)
+            stream = _do_ollama_inference(prompt, model_id, stream=True)
             answer = ""
             for chunk in stream:
                 new_chunk = chunk.message.content
