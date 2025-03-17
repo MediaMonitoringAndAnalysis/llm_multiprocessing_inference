@@ -25,7 +25,7 @@ general_pipelines = {
         "rate_limit": 2,
     },
     "Ollama": {
-        "model": "gemma3:12b",
+        "model": "gemma3:4b-it-q4_K_M",
         "url": None,
         "rate_limit": None,
     },
