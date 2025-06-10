@@ -131,6 +131,7 @@ async def _call_chatgpt_async(
     api_pipeline: Literal["OpenAI", "Perplexity"],
     default_response: str,
     api_key: str,
+    return_citations: bool = False,
 ):
 
     final_model = general_pipelines[api_pipeline]["model"] if model is None else model
@@ -157,6 +158,10 @@ async def _call_chatgpt_async(
 
         try:
             output_text = clean_response["choices"][0]["message"]["content"]
+            if api_pipeline == "Perplexity":
+                citations = clean_response["citations"]
+            else:
+                citations = None
             # st.markdown(output_text)
             # print("Worked")
         except Exception as e:
@@ -166,6 +171,8 @@ async def _call_chatgpt_async(
     gpt_extracted_infos = _postprocess_output(
         output_text, default_response, response_type
     )
+    if return_citations and citations is not None:
+        gpt_extracted_infos = {"citations": citations, "answer": gpt_extracted_infos}
 
     return gpt_extracted_infos
 
@@ -180,6 +187,7 @@ async def _call_chatgpt_bulk(
     api_pipeline: Literal["OpenAI", "Perplexity"],
     progress_bar: bool = True,
     additional_progress_bar_description: str = "",
+    return_citations: bool = False,
 ):
     final_progress_bar_description = "Processing Data"
     if additional_progress_bar_description != "":
@@ -207,6 +215,7 @@ async def _call_chatgpt_bulk(
                     default_response=default_response,
                     api_key=api_key,
                     api_pipeline=api_pipeline,
+                    return_citations=return_citations,
                 )
             except Exception as e:
                 print(f"Error in wrapped_call: {e}")
@@ -372,6 +381,7 @@ def get_answers(
     show_progress_bar: bool = True,
     additional_progress_bar_description: str = "",
     stream: bool = False,
+    return_citations: bool = False,
 ) -> List[Union[str, List[str], Dict[str, Union[str, float]]]]:
 
     assert (
@@ -396,6 +406,7 @@ def get_answers(
                 api_pipeline=api_pipeline,
                 progress_bar=show_progress_bar,
                 additional_progress_bar_description=additional_progress_bar_description,
+                return_citations=return_citations,
             )  # _call_chatgpt_bulk(prompts, "{}", "structured")
         )
 
