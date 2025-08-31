@@ -132,6 +132,7 @@ async def _call_chatgpt_async(
     default_response: str,
     api_key: str,
     return_citations: bool = False,
+    temperature: float = 0.0,
 ):
 
     final_model = general_pipelines[api_pipeline]["model"] if model is None else model
@@ -140,7 +141,7 @@ async def _call_chatgpt_async(
     payload = {
         "model": final_model,
         "messages": message,
-        "temperature": 0.0,
+        "temperature": temperature,
     }
 
     async with semaphore:
@@ -188,6 +189,7 @@ async def _call_chatgpt_bulk(
     progress_bar: bool = True,
     additional_progress_bar_description: str = "",
     return_citations: bool = False,
+    temperature: float = 0.0,
 ):
     final_progress_bar_description = "Processing Data"
     if additional_progress_bar_description != "":
@@ -216,6 +218,7 @@ async def _call_chatgpt_bulk(
                     api_key=api_key,
                     api_pipeline=api_pipeline,
                     return_citations=return_citations,
+                    temperature=temperature,
                 )
             except Exception as e:
                 print(f"Error in wrapped_call: {e}")
@@ -382,6 +385,7 @@ def get_answers(
     additional_progress_bar_description: str = "",
     stream: bool = False,
     return_citations: bool = False,
+    temperature: float = 0.0,
 ) -> List[Union[str, List[str], Dict[str, Union[str, float]]]]:
 
     assert (
@@ -407,6 +411,7 @@ def get_answers(
                 progress_bar=show_progress_bar,
                 additional_progress_bar_description=additional_progress_bar_description,
                 return_citations=return_citations,
+                temperature=temperature
             )  # _call_chatgpt_bulk(prompts, "{}", "structured")
         )
 
