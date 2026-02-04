@@ -190,13 +190,14 @@ async def _call_chatgpt_bulk(
     additional_progress_bar_description: str = "",
     return_citations: bool = False,
     temperature: float = 0.0,
+    rate_limit: int = None,
 ):
     final_progress_bar_description = "Processing Data"
     if additional_progress_bar_description != "":
         final_progress_bar_description += f" for {additional_progress_bar_description}"
-    rate_limit = general_pipelines[api_pipeline]["rate_limit"]
     assert response_type in ["structured", "unstructured"]
     # print("Messages", messages)
+    rate_limit = rate_limit if rate_limit is not None else general_pipelines[api_pipeline]["rate_limit"]
     semaphore = asyncio.Semaphore(rate_limit)  # Control concurrency level
     async with aiohttp.ClientSession() as session:
         # Create a tqdm async progress bar
@@ -386,6 +387,7 @@ def get_answers(
     stream: bool = False,
     return_citations: bool = False,
     temperature: float = 0.0,
+    rate_limit: int = None,
 ) -> List[Union[str, List[str], Dict[str, Union[str, float]]]]:
 
     assert (
@@ -411,7 +413,8 @@ def get_answers(
                 progress_bar=show_progress_bar,
                 additional_progress_bar_description=additional_progress_bar_description,
                 return_citations=return_citations,
-                temperature=temperature
+                temperature=temperature,
+                rate_limit=rate_limit,
             )  # _call_chatgpt_bulk(prompts, "{}", "structured")
         )
 
