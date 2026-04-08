@@ -1,140 +1,111 @@
-# OpenAI Multiprocess Inference
+# LLM Multiprocessing Inference
 
-A Python package for efficient parallel inference using OpenAI and other LLM APIs (can only be used on .py scripts and not on jupyter notebooks).
+High-throughput batched inference for `OpenAI`, `Perplexity`, and `Ollama` from Python scripts.
 
-## Prerequisites
+## 1) At a Glance
 
-- Python 3.10+
-- Ollama installed: [text](https://ollama.com/download)
+```mermaid
+flowchart LR
+    A[Input prompts] --> B{api_pipeline}
+    B -->|OpenAI / Perplexity| C[Async requests + rate limit]
+    B -->|Ollama| D[Local sequential inference]
+    C --> E[Postprocess output]
+    D --> E
+    E --> F[Structured dict OR unstructured text]
+```
 
-## Installation
+```mermaid
+graph TD
+    F1[get_answers] --> F2[Batch responses]
+    S1[get_answers_stream] --> S2[Generator chunks + collected answers]
+    S1 --> S3[Ollama only]
+```
+
+## 2) Installation
 
 ```bash
 pip install git+https://github.com/MediaMonitoringAndAnalysis/llm_multiprocessing_inference.git
 ```
 
-## Features
+## 3) Supported Pipelines
 
-- 🚀 Parallel inference using asyncio
-- 🔄 Support for multiple LLM APIs (OpenAI, Perplexity)
-- 📊 Progress bar for bulk operations
-- 🎯 Structured and unstructured response handling
-- 🛡️ Built-in error handling and retries
-- ⚡ Optimized for high-throughput scenarios
-- 🔄 Support for Ollama
+```mermaid
+stateDiagram-v2
+    [*] --> OpenAI
+    [*] --> Perplexity
+    [*] --> Ollama
 
-## Quick Start
-
-### Example 1: Structured inference with textual entries with OpenAI
-
-```python
-from llm_multiprocessing_inference import get_answers
-
-structured_system_prompt = "You are a helpful assistant, answer the user's question in a JSON format with the following keys: 'answer', 'confidence', 'source'."
-# Define your prompts
-prompts = [
-    [
-        {"role": "system", "content": structured_system_prompt},
-        {"role": "user", "content": "What is the capital of France?"},
-    ],
-    [
-        {"role": "system", "content": structured_system_prompt},
-        {"role": "user", "content": "What is the capital of Germany?"},
-    ],
-]
-
-# Get answers
-answers = get_answers(
-    prompts=prompts,
-    default_response={},
-    response_type="structured",
-    api_pipeline="OpenAI",  # or "Perplexity" or "Ollama"
-    api_key="your-api-key",  # only needed for OpenAI or Perplexity
-    model="your-model-here",
-)
+    OpenAI --> AsyncBulk: get_answers
+    Perplexity --> AsyncBulk: get_answers
+    Ollama --> SequentialBulk: get_answers
+    Ollama --> Streaming: get_answers_stream
 ```
 
-### Example 2: Unstructured inference with textual entries with Ollama
+| Pipeline | Default model | Concurrency style | API key required |
+|---|---|---|---|
+| OpenAI | `gpt-4o-mini` | Async bulk (rate-limited) | Yes |
+| Perplexity | `llama-3.1-sonar-small-128k-chat` | Async bulk (rate-limited) | Yes |
+| Ollama | `gemma3:4b-it-q4_K_M` | Sequential (memory-safe) | No |
+
+## 4) Input Format
+
+Each item in `prompts` is a chat message list:
 
 ```python
-from llm_multiprocessing_inference import get_answers
-
-stream = True
-
-unstructured_system_prompt = (
-    "You are a helpful assistant, answer the user's question in a free text format."
-)
-# Define your prompts
 prompts = [
     [
-        {"role": "system", "content": unstructured_system_prompt},
-        {"role": "user", "content": "What is the capital of France?"},
+        {"role": "system", "content": "Instruction..."},
+        {"role": "user", "content": "Question..."},
     ],
-    [
-        {"role": "system", "content": unstructured_system_prompt},
-        {"role": "user", "content": "What is the capital of Germany?"},
-    ],
+    ...
 ]
-
-# Get answers
-answers = get_answers(
-    prompts=prompts,
-    default_response="-",
-    response_type="unstructured",
-    api_pipeline="Ollama",  # or "Perplexity" or "OpenAI"
-    model="phi4-mini:3.8b-q4_K_M",
-    stream=stream,
-)
-
-if stream:
-    for answer in answers:
-        print(answer, end="", flush=True)
-else:
-    print(answers)
 ```
 
-### Example 3: Structured inference with images with OpenAI
+For Ollama image prompts, pass image paths in the user message:
 
 ```python
-import base64
+{"role": "user", "images": ["path/to/image.png"]}
+```
+
+## 5) Main API
+
+```python
+from llm_multiprocessing_inference import get_answers, get_answers_stream
+```
+
+### `get_answers(...)`
+
+- Bulk inference for all pipelines.
+- Returns a list of responses.
+- `response_type`:
+  - `structured`: parses model output into Python objects (`dict`/`list`) with fallback to `default_response`
+  - `unstructured`: raw text output
+
+### `get_answers_stream(...)`
+
+- Streaming generator + collected answers.
+- Currently intended for `Ollama`.
+- Returns: `(generator, answers_list)`
+
+## 6) Examples
+
+### A) Structured output (OpenAI)
+
+```python
 from llm_multiprocessing_inference import get_answers
 
+system_prompt = (
+    "Return JSON with keys: answer, confidence, source."
+)
 
-# Function to encode the image
-def encode_image(image_path):
-    with open(image_path, "rb") as image_file:
-        return base64.b64encode(image_file.read()).decode("utf-8")
-
-
-structured_system_prompt = "You are a helpful assistant, answer the user's question in a JSON format with the following keys: 'answer', 'confidence', 'source'."
-
-# Path to your image
-image_path = "path_to_your_image.jpg"
-
-# Getting the Base64 string
-base64_image = encode_image(image_path)
-
-# Define your prompts
 prompts = [
     [
-        {"role": "system", "content": structured_system_prompt},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": "What is the capital of France?"},
     ],
     [
-        {"role": "system", "content": structured_system_prompt},
-        {
-            "role": "user",
-            "content": [
-                {
-                    "type": "text",
-                    "text": "What is in this image?",
-                },
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-                },
-            ],
-        },
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": "What is the capital of Germany?"},
     ],
 ]
 
@@ -143,60 +114,84 @@ answers = get_answers(
     default_response={},
     response_type="structured",
     api_pipeline="OpenAI",
-    api_key="your-api-key",
-    model="gpt-4o-mini",
+    api_key="YOUR_OPENAI_KEY",
+    model="gpt-4o-mini",            # optional
+    show_progress_bar=True,         # optional
+    temperature=0.0,                # optional
+    rate_limit=5,                   # optional
 )
+
+print(answers)
 ```
 
-### Example 4: Structured inference with images with Ollama
+Expected output shape:
+
+```python
+[
+    {"answer": "Paris", "confidence": 0.99, "source": "-"},
+    {"answer": "Berlin", "confidence": 0.99, "source": "-"}
+]
+```
+
+### B) Unstructured output (Ollama)
 
 ```python
 from llm_multiprocessing_inference import get_answers
 
-structured_system_prompt = 'From this image, return a JSON with the asked information. Do not return any false information. Do not return anything other than the JSON dictionary. If you cannot find one information or are unsure, return "-".'
-
-# Path to your image
-image_path = "path_to_your_image.jpg"
-
-# Define your prompts
 prompts = [
     [
-        {"role": "system", "content": structured_system_prompt},
+        {"role": "system", "content": "Answer in one short sentence."},
         {"role": "user", "content": "What is the capital of France?"},
-    ],
-    [
-        {"role": "system", "content": structured_system_prompt},
-        {
-            "role": "user",
-            "content": 'From this image, return a JSON dictionary with the following information about the image metadata: "title", "description", "date", "source", "url".',
-            "images": [image_path],
-        },
-    ],
+    ]
 ]
 
 answers = get_answers(
     prompts=prompts,
+    default_response="-",
+    response_type="unstructured",
+    api_pipeline="Ollama",
+    model="gemma3:4b-it-q4_K_M",
+)
+
+print(answers)
+```
+
+Expected output shape:
+
+```python
+["Paris is the capital of France."]
+```
+
+### C) Streaming with Ollama
+
+```python
+from llm_multiprocessing_inference import get_answers_stream
+
+prompts = [
+    [
+        {"role": "system", "content": "Return JSON with keys: answer, relevancy."},
+        {"role": "user", "content": "What is the capital of France?"},
+    ]
+]
+
+chunks, final_answers = get_answers_stream(
+    prompts=prompts,
     default_response={},
     response_type="structured",
     api_pipeline="Ollama",
-    model="llava:7b-v1.6-mistral-q4_K_M",
+    model="gemma3:4b",
 )
+
+for chunk in chunks:
+    print(chunk, end="", flush=True)
+
+print("\nFinal:", final_answers)
 ```
 
+## 7) Notes and Best Practices
 
-
-
-## Tree Structure
-Here's the complete tree structure for the package:
-
-```plaintext
-├── LICENSE
-├── README.md
-├── pyproject.toml
-├── requirements.txt
-├── setup.py
-└── src/
-    └── llm_multiprocessing_inference/
-        ├── __init__.py
-        └── inference.py
-```
+- Use `response_type="structured"` with strict JSON instructions in the system prompt.
+- Keep `default_response` aligned with expected output type (for example `{}` or `"-"`).
+- For OpenAI/Perplexity, always pass `api_key`.
+- For Ollama, the package pulls the requested model automatically if missing.
+- Use moderate `rate_limit` values to avoid provider throttling.
